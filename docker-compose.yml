@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  hldm:
+    build: .
+    image: spezifanta/hldm
+    ports:
+      - '27015:27015'
+      - '27015:27015/udp'
+      - '26900:26900/udp'
+    volumes:
+      - './config:/opt/steam/hldm/valve/config'
