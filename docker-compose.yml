@@ -1,12 +1,14 @@
-version: '3'
+version: '3.7'
 
 services:
   hldm:
-    build: .
+    build: docker
     image: spezifanta/hldm
-    ports:
-      - '27015:27015'
-      - '27015:27015/udp'
-      - '26900:26900/udp'
+    # ports:
+    #   - '27015:27015'
+    #   - '27015:27015/udp'
+    #   - '26900:26900/udp'
     volumes:
-      - './config:/opt/steam/hldm/valve/config'
+      - './gamedir:/gamedir'
+    command: +maxplayers 12 +map crossfire +rcon_password "supersecret" +log on +logaddress 0.0.0.0 27500 +sys_ticrate 1000 -pingboost 2
+    network_mode: 'host'

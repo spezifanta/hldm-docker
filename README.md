@@ -1,5 +1,5 @@
 
-![Half-Life](banner.jpg)
+![Half-Life](/media/banner.jpg)
 
 # Half-Life Deathmatch Server as Docker image
 
@@ -38,19 +38,20 @@ The following default maps are available:
 
 ## Advanced
 
-In order to use a custom server config file, create a directory named `config` and a file called `server.cfg` (name must match) by running:
+In order to use a custom content like maps or server config file, create a directory named `gamedir` and place your files there.
+For an example of a custom `server.cfg` run:
 
 ```
-mkdir config && echo 'echo "Executing custom config/server.cfg"' > config/server.cfg
+mkdir gamedir && echo 'echo "Executing custom server.cfg"' > gamedir/server.cfg
 ```
 
-Add your settings to `server.cfg` and mount the directory as volume by running:
+Add your settings to the `server.cfg` and mount the directory as volume by running:
 
 ```
-docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v config:/opt/steam/hldm/valve/config spezifanta/hldm
+docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v gamedir:/gamedir spezifanta/hldm
 ```
 
-You should see `Executing custom config/server.cfg` in the server log when starting the server.
+You should see `Executing custom server.cfg` in the server log when starting the server.
 
 
 ## About this Docker image
