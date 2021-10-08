@@ -9,11 +9,12 @@ ENV LC_ALL C.UTF-8
 RUN groupadd -r steam && useradd -r -g steam -m -d /opt/steam steam
 
 # Update base image and install dependencies.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN dpkg --add-architecture i386 \
+&& apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
-    lib32gcc1 \
-&& rm -rf /var/lib/apt/lists/*
+    libc6:i386 \
+&& apt-get clean
 
 USER steam
 WORKDIR /opt/steam
@@ -21,7 +22,7 @@ COPY ./misc/hldm.install /opt/steam
 
 # Download SteamCMD and install HLDM.
 RUN curl -sL media.steampowered.com/client/installer/steamcmd_linux.tar.gz | tar xzvf - \
-    && ./steamcmd.sh +runscript hldm.install
+    && ldd /opt/steam/linux32/steamcmd && ./steamcmd.sh +runscript hldm.install
 
 # Workaround, because steamcmd is not fully downloading HLDS, reset those files.
 COPY ./misc/appmanifest_70.acf /opt/steam/hldm/steamapps/appmanifest_70.acf
