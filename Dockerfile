@@ -19,6 +19,7 @@ RUN dpkg --add-architecture i386 \
 USER steam
 WORKDIR /opt/steam
 COPY ./misc/hldm.install /opt/steam
+COPY ./misc/hldm.update /opt/steam
 
 # Download SteamCMD and install HLDM.
 RUN curl -sL media.steampowered.com/client/installer/steamcmd_linux.tar.gz | tar xzvf - \
@@ -44,13 +45,16 @@ RUN echo 70 > steam_appid.txt
 RUN rm -fr cstrike
 
 # Copy configs, Metamod and Stripper2.
-COPY valve valve
+COPY --chown=steam:steam valve valve
+
+# Copy deploy script
+COPY ./misc/hlds_deploy /opt/steam/hldm
 
 EXPOSE 27015
 EXPOSE 27015/udp
 
 # Start server.
-ENTRYPOINT ["./hlds_run", "-timeout 3"]
+ENTRYPOINT ["./hlds_deploy", "-timeout 5"]
 
 # Default start parameters.
 CMD ["+maxplayers 12", "+map crossfire"]

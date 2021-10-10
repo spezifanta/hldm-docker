@@ -1,0 +1,40 @@
+#!/bin/sh
+
+announce() {
+sep="--------------------------------------------------------------------------------"
+printf "\n\n%s\n   %s\n%s\n\n" "${sep}" "$1" "${sep}"
+}
+
+cat << END
+
+
+--------------------------------------------------------------------------------
+
+        #     #         #               ######           #####
+        #     #         #               #     #         #     #
+        #     #         #               #     #         #
+        #######         #               #     #          #####
+        #     #         #               #     #               #
+        #     #         #               #     #         #     #
+        #     #         #######         ######           #####
+
+                       (((     Docker Deployment     )))
+
+--------------------------------------------------------------------------------
+
+END
+
+
+announce "Updating HLDS via SteamCMD..."
+../steamcmd.sh +runscript hldm.update
+
+announce "Deploying gamedir..."
+if [ -d valve/config/deploy/gamedir ]
+then
+	find valve/config/deploy/gamedir -mindepth 1 -maxdepth 1 -exec cp -vr {} valve/ \;
+else
+	printf "No gamedir deploy found.\n"
+fi
+
+announce "Starting HLDS..."
+exec ./hlds_run "$@"

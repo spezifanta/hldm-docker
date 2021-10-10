@@ -1,0 +1,4 @@
+login anonymous
+force_install_dir ./hldm
+app_update 90
+quit
