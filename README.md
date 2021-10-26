@@ -104,5 +104,5 @@ MIT
 Connect to `steamcalculator.com:27015` to give it a try.
 
 <a href="https://www.youtube.com/watch?v=y15dfBZSx9Q" target="_blank">
-<img src="/github-video.jpg" alt="HLDM Docker"/>
+<img src="/media/github-video.jpg" alt="HLDM Docker"/>
 </a>
