@@ -1,9 +1,88 @@
 #!/bin/sh
+DEPLOY=valve/config/deploy
+DEPLOY_MAPS=${DEPLOY}/install-maps
+DEPLOY_ASSETS=${DEPLOY}/install-assets
+DEPLOY_GAMEDIR=${DEPLOY}/copy-gamedir
+TARGET_GAMEDIR=valve
+TARGET_MAPS=${TARGET_GAMEDIR}/maps
 
 announce() {
 sep="--------------------------------------------------------------------------------"
 printf "\n\n%s\n   %s\n%s\n\n" "${sep}" "$1" "${sep}"
 }
+
+is_multiplayer_map() {
+	BSPFILE="$1"
+	grep -q "^\"classname\" \"info_player_deathmatch\"$" "${BSPFILE}"
+}
+
+decompress_with() {
+	COMMAND="$1"
+	SWITCHES="$2"
+	SOURCE="$3"
+	TARGET="$4"
+
+	outfile="${TARGET}/${filename%.*}"
+	eval "${COMMAND}" "${SOURCE}" "${SWITCHES}" > "${outfile}"
+	touch -r "${SOURCE}" "${outfile}"
+}
+
+deploy_archive() {
+	SOURCE="$1"
+	TARGET="$2"
+
+	filename="$(basename "${SOURCE}")"
+	filetype="$(file -b --mime-type "${SOURCE}")"
+	filetype="${filetype#"application/"}"
+
+	printf "\nConsidering %s, it is a(n) %s...\n" "${SOURCE}" "${filetype}"
+	case "${filetype}" in
+		"gzip")
+			decompress_with gunzip -vc "${SOURCE}" "${TARGET}";;
+		"x-bzip2")
+			decompress_with bunzip2 -vc "${SOURCE}" "${TARGET}";;
+		"x-xz")
+			decompress_with unxz -vc "${SOURCE}" "${TARGET}";;
+		"zstd")
+			zstd -vdfo "${TARGET}/${filename%.*}" "${SOURCE}";;
+		"x-7z-compressed" | "zip" | "x-rar" | "x-arj")
+			7z x -bb1 "${SOURCE}" -y -o"${TARGET}/";;
+		*)
+			printf "ERROR! Skipping %s due to unknown file type.\n" "${SOURCE}" >&2
+	esac
+}
+
+deploy_archive_map() {
+	SOURCE="$1"
+	TARGET="$2"
+
+	filename="$(basename "${SOURCE}")"
+	fileext="${filename##*.}"
+	filetype="$(file -b --mime-type "${SOURCE}")"
+
+	if [ "${fileext}" = "bsp" ]
+	then
+		if is_multiplayer_map "${SOURCE}"
+		then
+			printf "\nFound BSP %s...\n" "${SOURCE}"
+			cp -pv "${SOURCE}" "${TARGET}/"
+		else
+			printf "\nFound %s, but it is not a Half-Life muptiplayer map!\n" "${SOURCE}" >&2
+		fi
+	elif [ "${fileext}" = "res" ]
+	then
+		if [ "$(file -b --mime-type "${SOURCE}")" = "text/plain" ]
+		then
+			printf "\nFound RES %s...\n" "${SOURCE}"
+			cp -pv "${SOURCE}" "${TARGET}/"
+		else
+			printf "\nFound %s, but it is not a valid resource file!\n" "${SOURCE}" >&2
+		fi
+	else
+		deploy_archive "${SOURCE}" "${TARGET}"
+	fi
+}
+
 
 cat << END
 
@@ -25,13 +104,40 @@ cat << END
 END
 
 
-announce "Updating HLDS via SteamCMD..."
-../steamcmd.sh +runscript hldm.update
+# This often breaks HLDS, rather not try
+#announce "Updating HLDS via SteamCMD..."
+#../steamcmd.sh +runscript hldm.update
+
+announce "Deploying assets..."
+if [ -d "${DEPLOY_ASSETS}" ]
+then
+	find "${DEPLOY_ASSETS}" -mindepth 1 -maxdepth 1 | while read -r sourcefile
+	do
+		deploy_archive "${sourcefile}" "${TARGET_GAMEDIR}"
+	done
+	printf "Contents of %s:\n" "${TARGET_GAMEDIR}"
+	ls -l "${TARGET_GAMEDIR}"
+else
+	printf "No assets deploy found.\n"
+fi
+
+announce "Deploying maps..."
+if [ -d "${DEPLOY_MAPS}" ]
+then
+	find "${DEPLOY_MAPS}" -mindepth 1 -maxdepth 1 | while read -r sourcefile
+	do
+		deploy_archive_map "${sourcefile}" "${TARGET_MAPS}"
+	done
+	printf "Contents of %s:\n" "${TARGET_MAPS}"
+	ls -l "${TARGET_MAPS}"
+else
+	printf "No maps deploy found.\n"
+fi
 
 announce "Deploying gamedir..."
-if [ -d valve/config/deploy/gamedir ]
+if [ -d "${DEPLOY_GAMEDIR}" ]
 then
-	find valve/config/deploy/gamedir -mindepth 1 -maxdepth 1 -exec cp -vr {} valve/ \;
+	find "${DEPLOY_GAMEDIR}" -mindepth 1 -maxdepth 1 -exec cp -vr {} "${TARGET_GAMEDIR}"/ \;
 else
 	printf "No gamedir deploy found.\n"
 fi

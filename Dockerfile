@@ -10,9 +10,16 @@ RUN groupadd -r steam && useradd -r -g steam -m -d /opt/steam steam
 
 # Update base image and install dependencies.
 RUN dpkg --add-architecture i386 \
+&& sed -i "s/main$/main non-free/g" /etc/apt/sources.list \
 && apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    file \
+    gzip \
+    bzip2 \
+    xz-utils \
+    zstd \
+    p7zip-rar \
     libc6:i386 \
 && apt-get clean
 
@@ -29,8 +36,8 @@ RUN curl -sL media.steampowered.com/client/installer/steamcmd_linux.tar.gz | tar
 COPY ./misc/appmanifest_70.acf /opt/steam/hldm/steamapps/appmanifest_70.acf
 COPY ./misc/appmanifest_90.acf /opt/steam/hldm/steamapps/appmanifest_90.acf
 
-# Download HLDS again.
-RUN ./steamcmd.sh +runscript hldm.install
+# Download HLDS again, fail compose if unsuccessful.
+RUN ./steamcmd.sh +runscript hldm.install && stat ./hldm/valve/gfx.wad
 
 # Fix error that steamclient.so is missing.
 RUN mkdir -p $HOME/.steam \
