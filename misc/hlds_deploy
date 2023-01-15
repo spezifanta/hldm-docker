@@ -36,6 +36,17 @@ deploy_archive() {
 	filetype="${filetype#"application/"}"
 
 	printf "\nConsidering %s, it is a(n) %s...\n" "${SOURCE}" "${filetype}"
+
+	# Check for tar compressed with gzip, bzip2, xz, zstd
+	if [ "${filetype}" = "gzip" ] || [ "${filetype}" = "x-bzip2" ] || [ "${filetype}" = "x-xz" ] || [ "${filetype}" = "zstd" ]
+	then
+		if [ "$(file -bz --mime-type "${SOURCE}")" = "application/x-tar" ]
+		then
+			printf "Found x-tar compressed with %s.\n" "${filetype}"
+			filetype="x-tar"
+		fi
+	fi
+
 	case "${filetype}" in
 		"gzip")
 			decompress_with gunzip -vc "${SOURCE}" "${TARGET}";;
@@ -45,6 +56,8 @@ deploy_archive() {
 			decompress_with unxz -vc "${SOURCE}" "${TARGET}";;
 		"zstd")
 			zstd -vdfo "${TARGET}/${filename%.*}" "${SOURCE}";;
+		"x-tar")
+			tar xvfC "${SOURCE}" "${TARGET}";;
 		"x-7z-compressed" | "zip" | "x-rar" | "x-arj")
 			7z x -bb1 "${SOURCE}" -y -o"${TARGET}/";;
 		*)
