@@ -5,6 +5,7 @@ DEPLOY_ASSETS=${DEPLOY}/install-assets
 DEPLOY_GAMEDIR=${DEPLOY}/copy-gamedir
 TARGET_GAMEDIR=valve
 TARGET_MAPS=${TARGET_GAMEDIR}/maps
+MAPCYCLE=${TARGET_GAMEDIR}/mapcycle.txt
 
 announce() {
 sep="--------------------------------------------------------------------------------"
@@ -154,6 +155,22 @@ then
 else
 	printf "No gamedir deploy found.\n"
 fi
+
+announce "Generating mapcycle.txt..."
+printf "" > "${MAPCYCLE}"
+find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | while read -r bspfile
+do
+	mapname="$(basename "${bspfile}")"
+	mapname="${mapname%.*}"
+	printf "%-30s: " "${mapname}"
+	if is_multiplayer_map "${bspfile}"
+	then
+		printf "%s\n" "${mapname}" >> "${MAPCYCLE}"
+		printf "added\n"
+	else
+		printf "skipped (not a multiplayer map)\n"
+	fi
+done
 
 announce "Starting HLDS..."
 exec ./hlds_run "$@"
