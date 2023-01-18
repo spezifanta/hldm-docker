@@ -7,16 +7,24 @@ TARGET_GAMEDIR=valve
 TARGET_MAPS=${TARGET_GAMEDIR}/maps
 MAPCYCLE=${TARGET_GAMEDIR}/mapcycle.txt
 
+# announce text
+# Print text with separator lines.
 announce() {
-sep="--------------------------------------------------------------------------------"
-printf "\n\n%s\n   %s\n%s\n\n" "${sep}" "$1" "${sep}"
+	sep="--------------------------------------------------------------------------------"
+	printf "\n\n%s\n   %s\n%s\n\n" "${sep}" "$1" "${sep}"
 }
 
+# is_multiplayer_map bspfile
+# Determines is given BSP file is a multiplayer map by searching for an
+# info_player_deathmatch entity.
 is_multiplayer_map() {
 	BSPFILE="$1"
 	grep -q "^\"classname\" \"info_player_deathmatch\"$" "${BSPFILE}"
 }
 
+# decompress_with command switches source target
+# Use the specified command and its switches to decompress the source file
+# to the given destination directory.
 decompress_with() {
 	COMMAND="$1"
 	SWITCHES="$2"
@@ -28,6 +36,8 @@ decompress_with() {
 	touch -r "${SOURCE}" "${outfile}"
 }
 
+# deploy_archive source target
+# Extracts an archive file (source) to the target directory.
 deploy_archive() {
 	SOURCE="$1"
 	TARGET="$2"
@@ -66,6 +76,10 @@ deploy_archive() {
 	esac
 }
 
+# deploy_archive_map source target
+# The source may be an archive, a BSP file, or a RES file. In case the source
+# is an archive, extract it with deploy_archive. If it is a multiplayer map or
+# accompanying resource file, copy it to the target directory.
 deploy_archive_map() {
 	SOURCE="$1"
 	TARGET="$2"
@@ -81,7 +95,7 @@ deploy_archive_map() {
 			printf "\nFound BSP %s...\n" "${SOURCE}"
 			cp -pv "${SOURCE}" "${TARGET}/"
 		else
-			printf "\nFound %s, but it is not a Half-Life muptiplayer map!\n" "${SOURCE}" >&2
+			printf "\nFound %s, but it is not a Half-Life multiplayer map!\n" "${SOURCE}" >&2
 		fi
 	elif [ "${fileext}" = "res" ]
 	then
@@ -122,6 +136,7 @@ END
 #announce "Updating HLDS via SteamCMD..."
 #../steamcmd.sh +runscript hldm.update
 
+# Deploy archives to the base game directory
 announce "Deploying assets..."
 if [ -d "${DEPLOY_ASSETS}" ]
 then
@@ -129,12 +144,11 @@ then
 	do
 		deploy_archive "${sourcefile}" "${TARGET_GAMEDIR}"
 	done
-	printf "Contents of %s:\n" "${TARGET_GAMEDIR}"
-	ls -l "${TARGET_GAMEDIR}"
 else
 	printf "No assets deploy found.\n"
 fi
 
+# Deploy archives to the maps directory
 announce "Deploying maps..."
 if [ -d "${DEPLOY_MAPS}" ]
 then
@@ -142,12 +156,11 @@ then
 	do
 		deploy_archive_map "${sourcefile}" "${TARGET_MAPS}"
 	done
-	printf "Contents of %s:\n" "${TARGET_MAPS}"
-	ls -l "${TARGET_MAPS}"
 else
 	printf "No maps deploy found.\n"
 fi
 
+# Copy miscellaneous files to the game directory
 announce "Deploying gamedir..."
 if [ -d "${DEPLOY_GAMEDIR}" ]
 then
@@ -156,6 +169,9 @@ else
 	printf "No gamedir deploy found.\n"
 fi
 
+# Generate a mapcycle.txt by enumerating all multiplayer maps
+# In case the server owner prefers to use a hand-made mapcycle.txt, this file
+# might be overridden by specifying a different mapcycle file in server.cfg
 announce "Generating mapcycle.txt..."
 printf "" > "${MAPCYCLE}"
 find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | while read -r bspfile
@@ -172,5 +188,7 @@ do
 	fi
 done
 
+# Execute the hlds_run script, replacing the current process, thus this
+# deployment script and its shell interpreter will be unloaded from memory
 announce "Starting HLDS..."
 exec ./hlds_run "$@"
