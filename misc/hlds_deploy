@@ -188,6 +188,26 @@ do
 	fi
 done
 
+# Check for potentially misinstalled maps
+if [ "$(find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | wc -l)" -gt 0 ]
+then
+	announce "WARNING! Misinstalled maps in root game directory!"
+	printf "%s\n%s\n\n" \
+		"The following maps found in the root game directory, likely came from" \
+		"archive files you should have put into $(basename "${DEPLOY_MAPS}") instead:"
+	ls -l "${TARGET_GAMEDIR}"/*.bsp
+fi
+
+rmdir "${TARGET_MAPS}/maps" 2> /dev/null
+if [ -d "${TARGET_MAPS}/maps" ]
+then
+	announce "WARNING! Misinstalled maps in ${TARGET_MAPS}/maps directory!"
+	printf "%s\n%s\n\n" \
+		"The following files likely came from an archive you should have put" \
+		"into $(basename "${DEPLOY_ASSETS}") instead:"
+	ls -l "${TARGET_MAPS}/maps"
+fi
+
 # Execute the hlds_run script, replacing the current process, thus this
 # deployment script and its shell interpreter will be unloaded from memory
 announce "Starting HLDS..."
