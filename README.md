@@ -52,6 +52,14 @@ docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v config:/opt/steam/hldm
 
 You should see `Executing custom config/server.cfg` in the server log when starting the server.
 
+You can also add custom content by creating the following directories under `config/deploy`:
+
+ - `install-assets`: You can put archive files here to be extracted into the root game directory (`valve`).
+ - `install-maps`: Put archive files or BSP, RES files here to be deployed into the `maps` subdirectory.
+ - `copy-gamedir`: The entire directory structure will be copied verbatim into the root game directory.
+
+The following archive formats are supported: `zip`, `7z`, `rar`, `tar`, `gzip`, `bzip2`, `xz`, `zstd`, `arj`. To remove content, you can simply remove the files from `deploy` and then recreate your container.
+
 
 ## About this Docker image
 
