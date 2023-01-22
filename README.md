@@ -38,20 +38,28 @@ The following default maps are available:
 
 ## Advanced
 
-In order to use a custom content like maps or server config file, create a directory named `gamedir` and place your files there.
+In order to use custom content like maps or server config file, create a directory named `deploy` and a subdirectory `copy-gamedir` and place your files there.
 For an example of a custom `server.cfg` run:
 
 ```
-mkdir gamedir && echo 'echo "Executing custom server.cfg"' > gamedir/server.cfg
+mkdir -p deploy/copy-gamedir && echo 'echo "Executing custom server.cfg"' > deploy/copy-gamedir/server.cfg
 ```
 
 Add your settings to the `server.cfg` and mount the directory as volume by running:
 
 ```
-docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v gamedir:/gamedir spezifanta/hldm
+docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v ${PWD}/deploy:/deploy spezifanta/hldm
 ```
 
 You should see `Executing custom server.cfg` in the server log when starting the server.
+
+You can add more content by creating the following directories under `deploy`:
+
+ - `install-assets`: You can put archive files here to be extracted into the root game directory (`valve`).
+ - `install-maps`: Put archive files or BSP, RES files here to be deployed into the `maps` subdirectory.
+ - `copy-gamedir`: The entire directory structure will be copied verbatim into the root game directory.
+
+The following archive formats are supported: `zip`, `7z`, `rar`, `tar`, `gzip`, `bzip2`, `xz`, `zstd`, `arj`. To remove content, you can simply remove the files from `deploy` and then recreate your container.
 
 
 ## About this Docker image

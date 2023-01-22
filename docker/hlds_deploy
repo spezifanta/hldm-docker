@@ -1,0 +1,214 @@
+#!/bin/sh
+DEPLOY=/deploy
+DEPLOY_MAPS=${DEPLOY}/install-maps
+DEPLOY_ASSETS=${DEPLOY}/install-assets
+DEPLOY_GAMEDIR=${DEPLOY}/copy-gamedir
+TARGET_GAMEDIR=valve
+TARGET_MAPS=${TARGET_GAMEDIR}/maps
+MAPCYCLE=${TARGET_GAMEDIR}/mapcycle.txt
+
+# announce text
+# Print text with separator lines.
+announce() {
+	sep="--------------------------------------------------------------------------------"
+	printf "\n\n%s\n   %s\n%s\n\n" "${sep}" "$1" "${sep}"
+}
+
+# is_multiplayer_map bspfile
+# Determines is given BSP file is a multiplayer map by searching for an
+# info_player_deathmatch entity.
+is_multiplayer_map() {
+	BSPFILE="$1"
+	grep -q "^\"classname\" \"info_player_deathmatch\"$" "${BSPFILE}"
+}
+
+# decompress_with command switches source target
+# Use the specified command and its switches to decompress the source file
+# to the given destination directory.
+decompress_with() {
+	COMMAND="$1"
+	SWITCHES="$2"
+	SOURCE="$3"
+	TARGET="$4"
+
+	outfile="${TARGET}/${filename%.*}"
+	eval "${COMMAND}" "${SOURCE}" "${SWITCHES}" > "${outfile}"
+	touch -r "${SOURCE}" "${outfile}"
+}
+
+# deploy_archive source target
+# Extracts an archive file (source) to the target directory.
+deploy_archive() {
+	SOURCE="$1"
+	TARGET="$2"
+
+	filename="$(basename "${SOURCE}")"
+	filetype="$(file -b --mime-type "${SOURCE}")"
+	filetype="${filetype#"application/"}"
+
+	printf "\nConsidering %s, it is a(n) %s...\n" "${SOURCE}" "${filetype}"
+
+	# Check for tar compressed with gzip, bzip2, xz, zstd
+	if [ "${filetype}" = "gzip" ] || [ "${filetype}" = "x-bzip2" ] || [ "${filetype}" = "x-xz" ] || [ "${filetype}" = "zstd" ]
+	then
+		if [ "$(file -bz --mime-type "${SOURCE}")" = "application/x-tar" ]
+		then
+			printf "Found x-tar compressed with %s.\n" "${filetype}"
+			filetype="x-tar"
+		fi
+	fi
+
+	case "${filetype}" in
+		"gzip")
+			decompress_with gunzip -vc "${SOURCE}" "${TARGET}";;
+		"x-bzip2")
+			decompress_with bunzip2 -vc "${SOURCE}" "${TARGET}";;
+		"x-xz")
+			decompress_with unxz -vc "${SOURCE}" "${TARGET}";;
+		"zstd")
+			zstd -vdfo "${TARGET}/${filename%.*}" "${SOURCE}";;
+		"x-tar")
+			tar xvfC "${SOURCE}" "${TARGET}";;
+		"x-7z-compressed" | "zip" | "x-rar" | "x-arj")
+			7z x -bb1 "${SOURCE}" -y -o"${TARGET}/";;
+		*)
+			printf "ERROR! Skipping %s due to unknown file type.\n" "${SOURCE}" >&2
+	esac
+}
+
+# deploy_archive_map source target
+# The source may be an archive, a BSP file, or a RES file. In case the source
+# is an archive, extract it with deploy_archive. If it is a multiplayer map or
+# accompanying resource file, copy it to the target directory.
+deploy_archive_map() {
+	SOURCE="$1"
+	TARGET="$2"
+
+	filename="$(basename "${SOURCE}")"
+	fileext="${filename##*.}"
+	filetype="$(file -b --mime-type "${SOURCE}")"
+
+	if [ "${fileext}" = "bsp" ]
+	then
+		if is_multiplayer_map "${SOURCE}"
+		then
+			printf "\nFound BSP %s...\n" "${SOURCE}"
+			cp -pv "${SOURCE}" "${TARGET}/"
+		else
+			printf "\nFound %s, but it is not a Half-Life multiplayer map!\n" "${SOURCE}" >&2
+		fi
+	elif [ "${fileext}" = "res" ]
+	then
+		if [ "$(file -b --mime-type "${SOURCE}")" = "text/plain" ]
+		then
+			printf "\nFound RES %s...\n" "${SOURCE}"
+			cp -pv "${SOURCE}" "${TARGET}/"
+		else
+			printf "\nFound %s, but it is not a valid resource file!\n" "${SOURCE}" >&2
+		fi
+	else
+		deploy_archive "${SOURCE}" "${TARGET}"
+	fi
+}
+
+
+cat << END
+
+
+--------------------------------------------------------------------------------
+
+        #     #         #               ######           #####
+        #     #         #               #     #         #     #
+        #     #         #               #     #         #
+        #######         #               #     #          #####
+        #     #         #               #     #               #
+        #     #         #               #     #         #     #
+        #     #         #######         ######           #####
+
+                       (((     Docker Deployment     )))
+
+--------------------------------------------------------------------------------
+
+END
+
+
+# This often breaks HLDS, rather not try
+#announce "Updating HLDS via SteamCMD..."
+#../steamcmd.sh +runscript hldm.update
+
+# Deploy archives to the base game directory
+announce "Deploying assets..."
+if [ -d "${DEPLOY_ASSETS}" ]
+then
+	find "${DEPLOY_ASSETS}" -mindepth 1 -maxdepth 1 | while read -r sourcefile
+	do
+		deploy_archive "${sourcefile}" "${TARGET_GAMEDIR}"
+	done
+else
+	printf "No assets deploy found. You may add archive files to %s.\n" "${DEPLOY_ASSETS}"
+fi
+
+# Deploy archives to the maps directory
+announce "Deploying maps..."
+if [ -d "${DEPLOY_MAPS}" ]
+then
+	find "${DEPLOY_MAPS}" -mindepth 1 -maxdepth 1 | while read -r sourcefile
+	do
+		deploy_archive_map "${sourcefile}" "${TARGET_MAPS}"
+	done
+else
+	printf "No maps deploy found. You may add archive files and maps to %s.\n" "${DEPLOY_MAPS}"
+fi
+
+# Copy miscellaneous files to the game directory
+announce "Deploying gamedir..."
+if [ -d "${DEPLOY_GAMEDIR}" ]
+then
+	find "${DEPLOY_GAMEDIR}" -mindepth 1 -maxdepth 1 -exec cp -vr {} "${TARGET_GAMEDIR}"/ \;
+else
+	printf "No gamedir deploy found. You may add files to %s.\n" "${DEPLOY_GAMEDIR}"
+fi
+
+# Generate a mapcycle.txt by enumerating all multiplayer maps
+# In case the server owner prefers to use a hand-made mapcycle.txt, this file
+# might be overridden by specifying a different mapcycle file in server.cfg
+announce "Generating mapcycle.txt..."
+printf "" > "${MAPCYCLE}"
+find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | while read -r bspfile
+do
+	mapname="$(basename "${bspfile}")"
+	mapname="${mapname%.*}"
+	printf "%-30s: " "${mapname}"
+	if is_multiplayer_map "${bspfile}"
+	then
+		printf "%s\n" "${mapname}" >> "${MAPCYCLE}"
+		printf "added\n"
+	else
+		printf "skipped (not a multiplayer map)\n"
+	fi
+done
+
+# Check for potentially misinstalled maps
+if [ "$(find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | wc -l)" -gt 0 ]
+then
+	announce "WARNING! Misinstalled maps in root game directory!"
+	printf "%s\n%s\n\n" \
+		"The following maps found in the root game directory, likely came from" \
+		"archive files you should have put into $(basename "${DEPLOY_MAPS}") instead:"
+	ls -l "${TARGET_GAMEDIR}"/*.bsp
+fi
+
+rmdir "${TARGET_MAPS}/maps" 2> /dev/null
+if [ -d "${TARGET_MAPS}/maps" ]
+then
+	announce "WARNING! Misinstalled maps in ${TARGET_MAPS}/maps directory!"
+	printf "%s\n%s\n\n" \
+		"The following files likely came from an archive you should have put" \
+		"into $(basename "${DEPLOY_ASSETS}") instead:"
+	ls -l "${TARGET_MAPS}/maps"
+fi
+
+# Execute the hlds_run script, replacing the current process, thus this
+# deployment script and its shell interpreter will be unloaded from memory
+announce "Starting HLDS..."
+exec ./hlds_run "$@"

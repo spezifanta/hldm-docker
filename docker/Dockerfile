@@ -8,26 +8,33 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # Update base image and install dependencies.
 RUN dpkg --add-architecture i386 \
+    && sed -i "s/main$/main non-free/g" /etc/apt/sources.list \
     && apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
-        rsync \
+        file \
+        gzip \
+        bzip2 \
+        xz-utils \
+        zstd \
+        p7zip-rar \
         libc6:i386 \
-    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
     && groupadd -r steam && useradd -r -g steam -m -d /opt/steam steam \
-    && mkdir /gamedir
+    && mkdir /deploy
 
 USER steam
 WORKDIR /opt/steam
 COPY ./hldm.install /opt/steam
 
-# Download SteamCMD and install HLDM.
+# Download SteamCMD and install HLDM. Abort container build on failure.
 RUN curl -sL media.steampowered.com/client/installer/steamcmd_linux.tar.gz | tar xzvf - \
     && ldd /opt/steam/linux32/steamcmd \
     && ./steamcmd.sh +runscript hldm.install \
     && rm -fr /opt/steam/hldm/cstrike \
     && rm -fr /opt/steam/hldm/siteserverui \
-    && rm -fr /opt/steam/hldm/linux64
+    && rm -fr /opt/steam/hldm/linux64 \
+    && stat ./hldm/valve/gfx.wad
 
 # Fix error that steamclient.so is missing.
 RUN mkdir -p $HOME/.steam \
@@ -37,14 +44,14 @@ RUN mkdir -p $HOME/.steam \
 WORKDIR /opt/steam/hldm
 
 # Copy configs, Metamod, Stripper2 and AMX.
-COPY --chown=steam:steam gamedir valve
-COPY --chown=steam:steam ./entrypoint.sh ./entrypoint.sh
+COPY --chown=steam:steam deploy/copy-gamedir valve
+COPY --chown=steam:steam ./hlds_deploy ./hlds_deploy
 
 EXPOSE 27015
 EXPOSE 27015/udp
 
 # Start server.
-ENTRYPOINT ["./entrypoint.sh", "-timeout 3"]
+ENTRYPOINT ["./hlds_deploy", "-timeout 15"]
 
 # Default start parameters.
 CMD ["+maxplayers 12", "+map crossfire"]
