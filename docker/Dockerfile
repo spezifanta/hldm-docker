@@ -1,14 +1,14 @@
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
-ENV VERSION 2021.9
-ENV RELEASE_DATE 2021-09-05
+ENV VERSION 2023.11
+ENV RELEASE_DATE 2023-11-18
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV DEBIAN_FRONTEND noninteractive
 
 # Update base image and install dependencies.
 RUN dpkg --add-architecture i386 \
-    && sed -i "s/main$/main non-free/g" /etc/apt/sources.list \
+    && sed -i "s/^Components: main$/Components: main non-free/g" /etc/apt/sources.list.d/debian.sources \
     && apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
