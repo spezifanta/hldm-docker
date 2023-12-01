@@ -1,7 +1,7 @@
 FROM debian:bookworm-slim
 
-ENV VERSION 2023.11
-ENV RELEASE_DATE 2023-11-18
+ENV VERSION 2023.12
+ENV RELEASE_DATE 2023-12-01
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV DEBIAN_FRONTEND noninteractive
@@ -19,6 +19,7 @@ RUN dpkg --add-architecture i386 \
         zstd \
         p7zip-rar \
         libc6:i386 \
+        libstdc++6:i386 \
     && apt-get clean && rm -rf /var/lib/apt/lists/* \
     && groupadd -r steam && useradd -r -g steam -m -d /opt/steam steam \
     && mkdir /deploy
