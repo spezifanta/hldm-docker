@@ -13,6 +13,7 @@ RUN dpkg --add-architecture i386 \
         curl \
         rsync \
         libc6:i386 \
+        libstdc++6:i386 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r steam && useradd -r -g steam -m -d /opt/steam steam \
     && mkdir /gamedir
