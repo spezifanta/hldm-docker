@@ -85,7 +85,7 @@ deploy_archive_map() {
 	TARGET="$2"
 
 	filename="$(basename "${SOURCE}")"
-	fileext="${filename##*.}"
+	fileext="$(printf "%s" "${filename##*.}" | tr 'BSPRE' 'bspre')"
 	filetype="$(file -b --mime-type "${SOURCE}")"
 
 	if [ "${fileext}" = "bsp" ]
@@ -174,7 +174,7 @@ fi
 # might be overridden by specifying a different mapcycle file in server.cfg
 announce "Generating mapcycle.txt..."
 printf "" > "${MAPCYCLE}"
-find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | while read -r bspfile
+find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp | while read -r bspfile
 do
 	mapname="$(basename "${bspfile}")"
 	mapname="${mapname%.*}"
@@ -189,13 +189,13 @@ do
 done
 
 # Check for potentially misinstalled maps
-if [ "$(find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -name \*.bsp | wc -l)" -gt 0 ]
+if [ "$(find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp | wc -l)" -gt 0 ]
 then
 	announce "WARNING! Misinstalled maps in root game directory!"
 	printf "%s\n%s\n\n" \
 		"The following maps found in the root game directory, likely came from" \
 		"archive files you should have put into $(basename "${DEPLOY_MAPS}") instead:"
-	ls -l "${TARGET_GAMEDIR}"/*.bsp
+	find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp -ls
 fi
 
 rmdir "${TARGET_MAPS}/maps" 2> /dev/null
