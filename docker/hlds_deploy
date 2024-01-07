@@ -189,15 +189,19 @@ do
 done
 
 # Check for potentially misinstalled maps
-if [ "$(find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp | wc -l)" -gt 0 ]
+tmplist="$(mktemp)"
+find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp -ls > "${tmplist}"
+if [ "$(wc -l < "${tmplist}")" -gt 0 ]
 then
 	announce "WARNING! Misinstalled maps in root game directory!"
 	printf "%s\n%s\n\n" \
 		"The following maps found in the root game directory, likely came from" \
 		"archive files you should have put into $(basename "${DEPLOY_MAPS}") instead:"
-	find "${TARGET_GAMEDIR}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp -ls
+	cat "${tmplist}"
 fi
 
+# First try to remove the bogus directory which will fail if it's not empty,
+# so we avoid listing an empty directory
 rmdir "${TARGET_MAPS}/maps" 2> /dev/null
 if [ -d "${TARGET_MAPS}/maps" ]
 then
@@ -207,6 +211,20 @@ then
 		"into $(basename "${DEPLOY_ASSETS}") instead:"
 	ls -l "${TARGET_MAPS}/maps"
 fi
+
+# Find maps from various other subdirectories
+find "${TARGET_GAMEDIR}" -mindepth 2 -type f -iname \*.bsp -not -ipath "${TARGET_MAPS}/*.bsp" -ls > "${tmplist}"
+find "${TARGET_MAPS}" -mindepth 2 -type f -iname \*.bsp -ls >> "${tmplist}"
+
+if [ "$(wc -l < "${tmplist}")" -gt 0 ]
+then
+	announce "WARNING! Misinstalled maps!"
+	printf "%s\n%s\n\n" \
+		"The following maps found in subdirectories where they are not supposed to be," \
+		"likely came from incorrectly structured archive files:"
+	cat "${tmplist}"
+fi
+rm "${tmplist}"
 
 # Execute the hlds_run script, replacing the current process, thus this
 # deployment script and its shell interpreter will be unloaded from memory
