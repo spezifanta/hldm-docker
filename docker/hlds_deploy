@@ -174,7 +174,7 @@ fi
 # might be overridden by specifying a different mapcycle file in server.cfg
 announce "Generating mapcycle.txt..."
 printf "" > "${MAPCYCLE}"
-find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp | while read -r bspfile
+find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -type f -iname \*.bsp -not -iname \*~\*.bsp | while read -r bspfile
 do
 	mapname="$(basename "${bspfile}")"
 	mapname="${mapname%.*}"
@@ -222,6 +222,15 @@ then
 	printf "%s\n%s\n\n" \
 		"The following maps found in subdirectories where they are not supposed to be," \
 		"likely came from incorrectly structured archive files:"
+	cat "${tmplist}"
+fi
+
+# Warn about maps with invalid filenames
+find "${TARGET_MAPS}" -mindepth 1 -maxdepth 1 -iname \*~\*.bsp -ls > "${tmplist}"
+if [ "$(wc -l < "${tmplist}")" -gt 0 ]
+then
+	announce "WARNING! Maps with invalid filenames!"
+	printf "The '~' character is not allowed in map names, thus these maps will not be functional:\n\n"
 	cat "${tmplist}"
 fi
 rm "${tmplist}"
