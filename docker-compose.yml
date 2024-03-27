@@ -5,8 +5,10 @@ services:
     build: docker
     image: spezifanta/hldm
     # ports:
+    # default port for player connection.
     #   - '27015:27015'
     #   - '27015:27015/udp'
+    # Port for VAC and master server queries. 
     #   - '26900:26900/udp'
     volumes:
       - './gamedir:/tmp/gamedir'
