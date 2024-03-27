@@ -48,7 +48,7 @@ mkdir gamedir && echo 'echo "Executing custom server.cfg"' > gamedir/server.cfg
 Add your settings to the `server.cfg` and mount the directory as volume by running:
 
 ```
-docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v gamedir:/gamedir spezifanta/hldm
+docker run -it --rm -d -p27015:27015 -p27015:27015/udp -v gamedir:/tmp/gamedir spezifanta/hldm
 ```
 
 You should see `Executing custom server.cfg` in the server log when starting the server.

@@ -9,6 +9,6 @@ services:
     #   - '27015:27015/udp'
     #   - '26900:26900/udp'
     volumes:
-      - './gamedir:/gamedir'
+      - './gamedir:/tmp/gamedir'
     command: +maxplayers 12 +map crossfire +rcon_password "supersecret" +log on +logaddress 0.0.0.0 27500 +sys_ticrate 1000 -pingboost 2
     network_mode: 'host'
