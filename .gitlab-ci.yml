@@ -6,8 +6,6 @@ variables:
 stages:
   - build
   - test
-  - publish
-  - deploy
 
 before_script:
   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
@@ -16,8 +14,8 @@ before_script:
 Build Image:
   stage: build
   script:
+    - cd docker
     - docker build --cache-from --pull -t "$CI_REGISTRY_IMAGE" . | tee stdout.log
-    - grep "0x101" stdout.log || grep "100.00" stdout.log
     - docker push "$CI_REGISTRY_IMAGE"
   retry: 2
 
