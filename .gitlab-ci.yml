@@ -15,7 +15,7 @@ Build Image:
   stage: build
   script:
     - cd docker
-    - docker build --cache-from --pull -t "$CI_REGISTRY_IMAGE" . | tee stdout.log
+    - docker build --cache-from --pull --build-arg RELEASE_DATE="$RELEASE_DATE" -t "$CI_REGISTRY_IMAGE" . | tee stdout.log
     - docker push "$CI_REGISTRY_IMAGE"
   retry: 2
 
