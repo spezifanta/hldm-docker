@@ -1,0 +1,145 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Set release date
+      id: date
+      run: echo "RELEASE_DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: ./docker
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          RELEASE_DATE=${{ steps.date.outputs.RELEASE_DATE }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Output image reference
+      id: image
+      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Launch HLDM and test
+      run: |
+        # Run the container in background and capture output
+        docker run -d --name hldm-test ${{ needs.build.outputs.image }} > /tmp/container_id
+
+        # Wait for the server to start
+        sleep 10
+
+        # Get container logs
+        docker logs hldm-test > /tmp/stdout.log 2>&1
+
+        # Display the logs
+        cat /tmp/stdout.log
+
+        # Check for the success string
+        if grep -m 1 "Connection to Steam servers successful" /tmp/stdout.log; then
+          echo "✅ HLDM server started successfully!"
+          exit 0
+        else
+          echo "❌ HLDM server failed to connect to Steam servers"
+          exit 1
+        fi
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker stop hldm-test || true
+        docker rm hldm-test || true
+
+  push-to-dockerhub:
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Pull and retag image for Docker Hub
+      run: |
+        # Pull the tested image from GitHub Container Registry
+        docker pull ${{ needs.build.outputs.image }}
+
+        # Tag for Docker Hub
+
+        docker tag ${{ needs.build.outputs.image }} ${{ secrets.DOCKERHUB_USERNAME }}/hldm:latest
+        docker tag ${{ needs.build.outputs.image }} ${{ secrets.DOCKERHUB_USERNAME }}/hldm:${{ github.sha }}
+
+        # Push to Docker Hub
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/hldm:latest
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/hldm:${{ github.sha }}
