@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLDM Docker - Half-Life Deathmatch Server Docker Image</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>HLDM Docker</h1>
+            <p class="subtitle">Dockerized Half-Life Deathmatch Server with AMX Mod X</p>
+
+            <div class="badges">
+                <a href="https://github.com/spezifanta/hldm-docker/actions" target="_blank">
+                    <img src="https://github.com/spezifanta/hldm-docker/workflows/CI/CD%20Pipeline/badge.svg" alt="CI/CD Status" class="badge">
+                </a>
+                <a href="https://hub.docker.com/r/spezifanta/hldm" target="_blank">
+                    <img src="https://img.shields.io/docker/pulls/spezifanta/hldm" alt="Docker Pulls" class="badge">
+                </a>
+                <a href="https://github.com/spezifanta/hldm-docker/blob/master/LICENSE" target="_blank">
+                    <img src="https://img.shields.io/github/license/spezifanta/hldm-docker" alt="License" class="badge">
+                </a>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2>Quick Start</h2>
+            <p>Get your Half-Life Deathmatch server running in seconds with Docker:</p>
+
+            <div class="code-block">
+                docker run -it --rm -d -p27015:27015 -p27015:27015/udp spezifanta/hldm
+            </div>
+
+            <p>Or use docker-compose for advanced configuration:</p>
+
+            <div class="code-block"># docker-compose.yaml
+services:
+  hldm:
+    image: spezifanta/hldm
+    ports:
+      - 27015:27015
+      - 27015:27015/udp
+      - 26900:26900/udp
+    volumes:
+      - ./gamedir:/tmp/gamedir
+    command: +maxplayers 12 +map crossfire +rcon_password "<span id="rcon-password">supersecret</span>" +log on +logaddress 0.0.0.0 27500 +sys_ticrate 1000 -pingboost 2
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="card feature">
+                <div class="feature-icon">🐳</div>
+                <h3>Docker Ready</h3>
+                <p>Containerized Half-Life Deathmatch server with all dependencies included. No complex setup required.</p>
+            </div>
+
+            <div class="card feature">
+                <div class="feature-icon">⚡</div>
+                <h3>AMX Mod X</h3>
+                <p>Pre-configured with AMX Mod X for enhanced server administration and custom plugins.</p>
+            </div>
+
+            <div class="card feature">
+                <div class="feature-icon">🔧</div>
+                <h3>Easy Configuration</h3>
+                <p>Simple environment variables and volume mounts for customizing your server settings.</p>
+            </div>
+
+        </div>
+
+        <div class="card">
+            <h2>Documentation</h2>
+            <p>Everything you need to get started:</p>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="https://github.com/spezifanta/hldm-docker" class="btn">📚 View on GitHub</a>
+             </div>
+        </div>
+
+        <div class="card">
+            <h2>Features</h2>
+            <ul class="server-features">
+                <li>MetaMod plugin support</li>
+                <li>AMX Mod X administration system</li>
+                <li>Botman's Stripper 2</li>
+                <li>Configurable game modes and maps</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 HLDM Docker Project. Licensed under MIT.</p>
+            <p>Built by <a href="https://spezi-clan.com">spezi-clan</a> with ❤️ for the Half-Life community</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
