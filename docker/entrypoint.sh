@@ -7,5 +7,5 @@ fi
 
 export LD_LIBRARY_PATH=".:$LD_LIBRARY_PATH"
 
-echo Starting HLDS...
-./hlds_linux "$@"
+echo "Starting HLDS Docker ${VERSION} (${RELEASE_DATE})..."
+./hlds_linux "${@}"
