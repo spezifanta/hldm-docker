@@ -18,7 +18,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      image: ${{ steps.image.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
     steps:
     - name: Checkout repository
@@ -42,12 +42,21 @@ jobs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=sha
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Set release date
       id: date
       run: echo "RELEASE_DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+    - name: Get commit ID
+      id: commit
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          echo "sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+        else
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+        fi
 
     - name: Build and push Docker image
       id: build
@@ -59,12 +68,14 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         build-args: |
           RELEASE_DATE=${{ steps.date.outputs.RELEASE_DATE }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+          COMMIT_ID=${{ steps.commit.outputs.sha }}
 
     - name: Output image reference
       id: image
-      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+      run: |
+        # Extract the first tag from metadata output (will be branch-specific)
+        IMAGE_REF=$(echo '${{ steps.meta.outputs.tags }}' | head -n1)
+        echo "image=${IMAGE_REF}" >> $GITHUB_OUTPUT
 
   test:
     runs-on: ubuntu-latest

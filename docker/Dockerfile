@@ -1,9 +1,11 @@
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 
 ARG RELEASE_DATE=2025-07-12
+ARG COMMIT_ID=unknown
 
 ENV VERSION=2025.8
 ENV RELEASE_DATE=${RELEASE_DATE}
+ENV COMMIT_ID=${COMMIT_ID}
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
@@ -53,4 +55,5 @@ CMD ["+maxplayers 12", "+map crossfire"]
 # Labels
 LABEL vendor=steamcalculator.com \
     hldm.docker.version="${VERSION}" \
-    hldm.docker.release-date="${RELEASE_DATE}"
+    hldm.docker.release-date="${RELEASE_DATE}" \
+    hldm.docker.commit-id="${COMMIT_ID}"
